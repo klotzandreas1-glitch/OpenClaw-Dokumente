@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "whisper-stt": {
+      "version": "1.0.0",
+      "installedAt": 1773747120256
+    },
+    "elevenlabs-stt-openclaw": {
+      "version": "1.2.2",
+      "installedAt": 1773747327193
+    },
+    "deepgram": {
+      "version": "1.0.1",
+      "installedAt": 1773748879326
+    }
+  }
+}
