@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Answers } from '../types';
 import { buildMandantLink, decodeAnswers } from '../utils/encode';
+import { ADMIN_PIN } from '../config';
 
 interface Mandant {
   id: string;
@@ -31,7 +32,7 @@ export default function Admin() {
     }
   });
 
-  const correctPin = import.meta.env.VITE_ADMIN_PIN ?? '1234';
+  const correctPin = ADMIN_PIN;
 
   const handleUnlock = () => {
     if (pin === correctPin) {

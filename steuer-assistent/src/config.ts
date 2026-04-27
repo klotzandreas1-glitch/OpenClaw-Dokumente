@@ -1,2 +1,2 @@
-// Kanzlei-E-Mail – Empfänger aller ausgefüllten Fragebögen
-export const KANZLEI_EMAIL = 'klotzandreas1@yahoo.de';
+// Admin-PIN für die Kanzlei-Seite (/admin)
+export const ADMIN_PIN = '1234';
