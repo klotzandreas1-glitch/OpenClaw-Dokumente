@@ -3,6 +3,7 @@ import type { Section, Answers } from '../types';
 import ProgressBar from './ProgressBar';
 import QuestionRenderer from './QuestionRenderer';
 import Summary from './Summary';
+import { sendEmail, downloadExcel } from '../utils/submit';
 
 interface Props {
   sections: Section[];
@@ -28,37 +29,11 @@ export default function Wizard({ sections, initialAnswers = {}, clientName, mand
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  const currentSection = sections[step];
   const hasVorjahr = Object.keys(initialAnswers).length > 0;
+  const currentSection = sections[step];
 
-  const handleChange = (id: string, value: Answers[string]) => {
-    setAnswers((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleNext = () => {
-    if (step < sections.length - 1) {
-      setStep((s) => s + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setShowSummary(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleBack = () => {
-    if (showSummary) {
-      setShowSummary(false);
-    } else if (step > 0) {
-      setStep((s) => s - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setSubmitError('');
-
-    const rows = sections.flatMap((section) =>
+  const buildRows = () =>
+    sections.flatMap((section) =>
       section.questions
         .filter((q) => {
           const v = answers[q.id];
@@ -71,18 +46,32 @@ export default function Wizard({ sections, initialAnswers = {}, clientName, mand
         })),
     );
 
+  const handleChange = (id: string, value: Answers[string]) => {
+    setAnswers((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleNext = () => {
+    if (step < sections.length - 1) {
+      setStep((s) => s + 1);
+    } else {
+      setShowSummary(true);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBack = () => {
+    if (showSummary) setShowSummary(false);
+    else if (step > 0) setStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError('');
+    const params = { clientName, mandantId, steuerjahr, rows: buildRows() };
     try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientName, mandantId, steuerjahr, rows }),
-      });
-
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? 'Unbekannter Fehler');
-      }
-
+      downloadExcel(params);
+      await sendEmail(params);
       setSubmitted(true);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Fehler beim Senden');
@@ -117,11 +106,7 @@ export default function Wizard({ sections, initialAnswers = {}, clientName, mand
         </div>
       )}
 
-      <ProgressBar
-        current={step}
-        total={sections.length}
-        sectionTitle={currentSection.title}
-      />
+      <ProgressBar current={step} total={sections.length} sectionTitle={currentSection.title} />
 
       {currentSection.subtitle && (
         <p className="text-slate-500 text-sm mb-6 -mt-4">{currentSection.subtitle}</p>
@@ -129,12 +114,7 @@ export default function Wizard({ sections, initialAnswers = {}, clientName, mand
 
       <div>
         {currentSection.questions.map((q) => (
-          <QuestionRenderer
-            key={q.id}
-            question={q}
-            answers={answers}
-            onChange={handleChange}
-          />
+          <QuestionRenderer key={q.id} question={q} answers={answers} onChange={handleChange} />
         ))}
       </div>
 
