@@ -165,7 +165,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ];
 
     const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: ABSENDER,
       to: KANZLEI_EMAIL,
       subject: `Anlage N ${body.steuerjahr} – ${body.clientName} (${body.mandantId})`,
@@ -173,9 +173,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       attachments,
     });
 
-    return res.status(200).json({ success: true });
+    if (result.error) {
+      console.error('Resend Fehler:', result.error);
+      return res.status(500).json({
+        error: `Resend: ${result.error.message ?? JSON.stringify(result.error)}`,
+      });
+    }
+
+    console.log('E-Mail gesendet, ID:', result.data?.id);
+    return res.status(200).json({ success: true, emailId: result.data?.id });
   } catch (err) {
-    console.error(err);
+    console.error('Unerwarteter Fehler:', err);
     return res.status(500).json({ error: String(err) });
   }
 }
