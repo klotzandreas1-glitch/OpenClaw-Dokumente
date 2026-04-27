@@ -6,16 +6,30 @@ import Summary from './Summary';
 
 interface Props {
   sections: Section[];
+  initialAnswers?: Answers;
+  clientName: string;
+  mandantId: string;
+  steuerjahr: number;
 }
 
-export default function Wizard({ sections }: Props) {
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
-  const [showSummary, setShowSummary] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+function formatValue(value: Answers[string]): string {
+  if (value === true) return 'Ja';
+  if (value === false) return 'Nein';
+  if (Array.isArray(value)) return (value as string[]).join(', ');
+  if (value === '' || value === undefined || value === null) return '';
+  return String(value);
+}
 
-  const isSummary = showSummary;
+export default function Wizard({ sections, initialAnswers = {}, clientName, mandantId, steuerjahr }: Props) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Answers>(initialAnswers);
+  const [showSummary, setShowSummary] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
   const currentSection = sections[step];
+  const hasVorjahr = Object.keys(initialAnswers).length > 0;
 
   const handleChange = (id: string, value: Answers[string]) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -40,18 +54,52 @@ export default function Wizard({ sections }: Props) {
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Eingaben:', JSON.stringify(answers, null, 2));
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError('');
+
+    const rows = sections.flatMap((section) =>
+      section.questions
+        .filter((q) => {
+          const v = answers[q.id];
+          return v !== undefined && v !== '' && q.type !== 'info';
+        })
+        .map((q) => ({
+          abschnitt: section.title,
+          frage: q.label,
+          antwort: formatValue(answers[q.id]),
+        })),
+    );
+
+    try {
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientName, mandantId, steuerjahr, rows }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? 'Unbekannter Fehler');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Fehler beim Senden');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (isSummary) {
+  if (showSummary) {
     return (
       <Summary
         sections={sections}
         answers={answers}
         onBack={handleBack}
         onSubmit={handleSubmit}
+        submitting={submitting}
+        submitError={submitError}
         submitted={submitted}
       />
     );
@@ -59,6 +107,16 @@ export default function Wizard({ sections }: Props) {
 
   return (
     <div>
+      {hasVorjahr && (
+        <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          <span className="text-lg">📋</span>
+          <div>
+            <strong>Vorjahreswerte vorausgefüllt.</strong> Bitte prüfen Sie alle Angaben
+            und korrigieren Sie, was sich geändert hat.
+          </div>
+        </div>
+      )}
+
       <ProgressBar
         current={step}
         total={sections.length}

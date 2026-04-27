@@ -1,6 +1,9 @@
 {
-  "buildCommand": "cd steuer-assistent && npm install && npm run build",
+  "buildCommand": "cd steuer-assistent && npm run build",
   "outputDirectory": "steuer-assistent/dist",
-  "installCommand": "echo skip",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "installCommand": "npm install && cd steuer-assistent && npm install",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
