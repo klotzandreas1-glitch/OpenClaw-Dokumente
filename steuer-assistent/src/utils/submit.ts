@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { WEB3FORMS_ACCESS_KEY } from '../config';
+import { KANZLEI_EMAIL } from '../config';
 
 export interface Row {
   abschnitt: string;
@@ -47,17 +47,20 @@ export async function sendEmail({ clientName, mandantId, steuerjahr, rows }: Sub
     `<th style="padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;text-align:left">Antwort</th>` +
     `</tr></thead><tbody>${tableRows}</tbody></table>`;
 
-  const res = await fetch('https://api.web3forms.com/submit', {
+  const res = await fetch(`https://formsubmit.co/ajax/${KANZLEI_EMAIL}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
-      access_key: WEB3FORMS_ACCESS_KEY,
-      subject: `Anlage N ${steuerjahr} – ${clientName} (${mandantId})`,
-      from_name: 'Steuer-Assistent',
+      _subject: `Anlage N ${steuerjahr} – ${clientName} (${mandantId})`,
+      _captcha: 'false',
+      _template: 'table',
+      name: clientName,
+      mandant_id: mandantId,
+      steuerjahr: String(steuerjahr),
       message,
     }),
   });
 
-  const data = (await res.json()) as { success: boolean; message?: string };
-  if (!data.success) throw new Error(data.message ?? 'Fehler beim E-Mail-Versand');
+  const data = (await res.json()) as { success: string; message?: string };
+  if (data.success !== 'true') throw new Error(data.message ?? 'Fehler beim E-Mail-Versand');
 }
