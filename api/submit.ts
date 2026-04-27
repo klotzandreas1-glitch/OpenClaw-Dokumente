@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import ExcelJS from 'exceljs';
 
 // ── Konfiguration ────────────────────────────────────────────────
-const RESEND_API_KEY  = 'RESEND_KEY_HIER_EINTRAGEN';
+const RESEND_API_KEY  = 're_hh85CmuV_LsWioj8AUwwqf9yCaPkjYkd3';
 const KANZLEI_EMAIL   = 'klotzandreas1@yahoo.de';
 const ABSENDER        = 'Steuer-Assistent <onboarding@resend.dev>';
 // ────────────────────────────────────────────────────────────────
