@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DATEV Jahresabschluss-Prüfer</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+  body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+  .navbar { background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%); }
+  .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .card-header { border-radius: 12px 12px 0 0 !important; font-weight: 600; }
+  .severity-hoch { border-left: 4px solid #dc3545; }
+  .severity-mittel { border-left: 4px solid #fd7e14; }
+  .severity-niedrig { border-left: 4px solid #ffc107; }
+  .badge-hoch { background: #dc3545; }
+  .badge-mittel { background: #fd7e14; }
+  .badge-niedrig { background: #ffc107; color: #333; }
+  .anomaly-card { cursor: pointer; transition: all .2s; }
+  .anomaly-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.12); }
+  .anomaly-card.resolved { opacity: .6; border-left-color: #28a745 !important; }
+  .kpi-card { text-align: center; }
+  .kpi-card .kpi-value { font-size: 1.8rem; font-weight: 700; color: #1a3a5c; }
+  .kpi-card .kpi-label { font-size: .85rem; color: #666; }
+  .account-row:hover { background: #f8f9fa; cursor: pointer; }
+  .booking-row td { font-size: .85rem; }
+  #upload-section { min-height: 60vh; display: flex; align-items: center; }
+  .drop-zone { border: 2px dashed #2563a8; border-radius: 12px; padding: 40px; text-align: center; transition: all .2s; background: #fff; }
+  .drop-zone:hover, .drop-zone.drag-over { background: #e8f0fe; border-color: #1a3a5c; }
+  .progress-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+  .progress-box { background: #fff; border-radius: 16px; padding: 40px; text-align: center; min-width: 360px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .nav-pills .nav-link { color: #1a3a5c; }
+  .nav-pills .nav-link.active { background: #2563a8; }
+  .booking-table { font-size: .82rem; }
+  .action-btn { font-size: .8rem; padding: 3px 10px; }
+  .summary-box { background: #e8f4fd; border-left: 4px solid #2563a8; border-radius: 8px; padding: 16px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark py-2 mb-4">
+  <div class="container">
+    <span class="navbar-brand fw-bold fs-5"><i class="bi bi-bar-chart-steps me-2"></i>DATEV Jahresabschluss-Prüfer</span>
+    <span class="text-white-50 small" id="nav-session-info"></span>
+  </div>
+</nav>
+
+<!-- Upload Section -->
+<div id="upload-section" class="section active">
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <i class="bi bi-cloud-upload me-2"></i>DATEV-Dateien hochladen
+        </div>
+        <div class="card-body p-4">
+          <form id="upload-form">
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Aktuelles Geschäftsjahr <span class="text-danger">*</span></label>
+              <div class="drop-zone" id="drop-current" onclick="document.getElementById('file-current').click()">
+                <i class="bi bi-file-earmark-spreadsheet fs-2 text-primary mb-2 d-block"></i>
+                <div class="fw-semibold">DATEV-Export (EXTF, CSV oder Excel) hier ablegen</div>
+                <div class="text-muted small mt-1">oder klicken zum Auswählen</div>
+                <div id="file-current-name" class="mt-2 text-success fw-semibold"></div>
+              </div>
+              <input type="file" id="file-current" name="current_file" accept=".csv,.txt,.xlsx,.xls" class="d-none" required>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Vorjahr (optional – für Abweichungsanalyse)</label>
+              <div class="drop-zone" id="drop-previous" onclick="document.getElementById('file-previous').click()">
+                <i class="bi bi-file-earmark-spreadsheet fs-2 text-secondary mb-2 d-block"></i>
+                <div class="fw-semibold text-muted">Vorjahres-DATEV-Export (optional)</div>
+                <div id="file-previous-name" class="mt-2 text-success fw-semibold"></div>
+              </div>
+              <input type="file" id="file-previous" name="previous_file" accept=".csv,.txt,.xlsx,.xls" class="d-none">
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Geschäftsjahr</label>
+              <input type="text" name="fiscal_year" class="form-control" value="2024" placeholder="z.B. 2024" style="max-width:160px">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+              <i class="bi bi-cpu me-2"></i>KI-Analyse starten
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Progress Overlay -->
+<div class="progress-overlay d-none" id="progress-overlay">
+  <div class="progress-box">
+    <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem"></div>
+    <h5 class="fw-bold" id="progress-title">Dateien werden analysiert...</h5>
+    <p class="text-muted small" id="progress-text">KI prüft alle Buchungen auf Auffälligkeiten</p>
+    <div class="progress mt-3" style="height:8px">
+      <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:100%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Section -->
+<div id="dashboard-section" class="section">
+<div class="container-fluid px-4">
+
+  <!-- KPI Row -->
+  <div class="row g-3 mb-4" id="kpi-row">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3">
+        <div class="kpi-value text-danger" id="kpi-anomalies">0</div>
+        <div class="kpi-label">Auffälligkeiten</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3">
+        <div class="kpi-value text-warning" id="kpi-high">0</div>
+        <div class="kpi-label">Hohe Priorität</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3">
+        <div class="kpi-value" id="kpi-bookings">0</div>
+        <div class="kpi-label">Buchungen gesamt</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card p-3">
+        <div class="kpi-value text-success" id="kpi-resolved">0</div>
+        <div class="kpi-label">Aufgelöst</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="row mb-4" id="summary-row" style="display:none!important">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="fw-bold mb-2"><i class="bi bi-lightbulb text-warning me-2"></i>KI-Zusammenfassung</h6>
+          <div class="summary-box" id="summary-text"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row g-3">
+    <!-- Left: Anomalies -->
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+          <span class="fw-bold"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Auffälligkeiten</span>
+          <div class="d-flex gap-2">
+            <select class="form-select form-select-sm" style="width:auto" id="filter-severity">
+              <option value="">Alle Schweregrade</option>
+              <option value="hoch">Hoch</option>
+              <option value="mittel">Mittel</option>
+              <option value="niedrig">Niedrig</option>
+            </select>
+            <select class="form-select form-select-sm" style="width:auto" id="filter-resolved">
+              <option value="">Alle</option>
+              <option value="open">Offen</option>
+              <option value="resolved">Aufgelöst</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body p-2" id="anomaly-list" style="max-height:70vh;overflow-y:auto">
+          <div class="text-center text-muted py-4">Keine Auffälligkeiten geladen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Detail + Accounts -->
+    <div class="col-lg-5">
+      <!-- Anomaly Detail -->
+      <div class="card mb-3" id="detail-card" style="display:none">
+        <div class="card-header bg-white py-2 fw-bold">
+          <i class="bi bi-info-circle me-2 text-primary"></i>Auffälligkeit bearbeiten
+        </div>
+        <div class="card-body" id="detail-content"></div>
+      </div>
+
+      <!-- Account Overview -->
+      <div class="card">
+        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+          <span class="fw-bold"><i class="bi bi-journal-text me-2 text-primary"></i>Kontenübersicht</span>
+          <input type="text" class="form-control form-control-sm" style="width:140px" placeholder="Konto suchen..." id="account-search">
+        </div>
+        <div class="card-body p-0" style="max-height:400px;overflow-y:auto">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light sticky-top">
+              <tr><th>Konto</th><th>Name</th><th class="text-end">Saldo</th><th class="text-center">!</th></tr>
+            </thead>
+            <tbody id="account-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Bar -->
+  <div class="row mt-3 mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
+          <span class="fw-semibold me-2">Export:</span>
+          <button class="btn btn-success btn-sm" id="btn-export-datev" onclick="exportDATEV()">
+            <i class="bi bi-download me-1"></i>Buchungssätze → DATEV (EXTF)
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="exportReport()">
+            <i class="bi bi-file-earmark-text me-1"></i>Prüfbericht (JSON)
+          </button>
+          <button class="btn btn-outline-primary btn-sm ms-auto" onclick="newUpload()">
+            <i class="bi bi-arrow-repeat me-1"></i>Neue Analyse
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Booking Detail Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingModalTitle">Buchungen – Konto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="table-responsive" style="max-height:60vh">
+          <table class="table table-sm table-hover booking-table mb-0">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th>Datum</th><th>S/H</th><th class="text-end">Betrag</th>
+                <th>Gegenkonto</th><th>BU</th><th>Beleg</th><th>Text</th>
+              </tr>
+            </thead>
+            <tbody id="booking-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let currentSession = null;
+let allAnomalies = [];
+let allAccounts = [];
+
+// ─── Upload ───────────────────────────────────────────────────────────────────
+['current','previous'].forEach(type => {
+  const input = document.getElementById(`file-${type}`);
+  const nameEl = document.getElementById(`file-${type}-name`);
+  const zone = document.getElementById(`drop-${type}`);
+
+  input.addEventListener('change', () => {
+    if (input.files[0]) nameEl.textContent = '✓ ' + input.files[0].name;
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const dt = new DataTransfer();
+    dt.items.add(e.dataTransfer.files[0]);
+    input.files = dt.files;
+    nameEl.textContent = '✓ ' + e.dataTransfer.files[0].name;
+  });
+});
+
+document.getElementById('upload-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fileInput = document.getElementById('file-current');
+  if (!fileInput.files[0]) { alert('Bitte Buchungsdatei auswählen.'); return; }
+
+  showProgress('Dateien werden hochgeladen...', 'DATEV-Export wird eingelesen');
+  const fd = new FormData(e.target);
+
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload fehlgeschlagen');
+    currentSession = data.session_id;
+    await loadDashboard(data);
+  } catch(err) {
+    hideProgress();
+    alert('Fehler: ' + err.message);
+  }
+});
+
+async function loadDashboard(uploadData) {
+  showProgress('KI-Analyse läuft...', `${uploadData.booking_count} Buchungen werden geprüft`);
+
+  try {
+    const res = await fetch(`/api/session/${currentSession}`);
+    const session = await res.json();
+
+    // KPIs
+    document.getElementById('kpi-anomalies').textContent = session.anomalies.length;
+    document.getElementById('kpi-high').textContent = session.anomalies.filter(a => a.severity === 'hoch').length;
+    document.getElementById('kpi-bookings').textContent = uploadData.booking_count;
+    document.getElementById('kpi-resolved').textContent = session.anomalies.filter(a => a.resolved).length;
+
+    // Summary
+    if (session.summary_text) {
+      const summaryEl = document.getElementById('summary-text');
+      summaryEl.innerHTML = session.summary_text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/• /g, '&bull; ');
+      document.getElementById('summary-row').style.setProperty('display', 'block', 'important');
+    }
+
+    document.getElementById('nav-session-info').textContent =
+      `GJ ${uploadData.fiscal_year} | ${uploadData.skr} | ${uploadData.booking_count} Buchungen | ${uploadData.account_count} Konten`;
+
+    allAnomalies = session.anomalies;
+    allAccounts = session.accounts || [];
+
+    renderAnomalies();
+    renderAccounts();
+
+    hideProgress();
+    showSection('dashboard-section');
+  } catch(err) {
+    hideProgress();
+    alert('Fehler beim Laden: ' + err.message);
+  }
+}
+
+// ─── Anomaly Rendering ────────────────────────────────────────────────────────
+function renderAnomalies() {
+  const severity = document.getElementById('filter-severity').value;
+  const resolvedFilter = document.getElementById('filter-resolved').value;
+
+  let list = allAnomalies;
+  if (severity) list = list.filter(a => a.severity === severity);
+  if (resolvedFilter === 'open') list = list.filter(a => !a.resolved);
+  if (resolvedFilter === 'resolved') list = list.filter(a => a.resolved);
+
+  // Sort: high first, then unresolved
+  list.sort((a, b) => {
+    const sev = {hoch:0, mittel:1, niedrig:2};
+    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+    return (sev[a.severity]||2) - (sev[b.severity]||2);
+  });
+
+  const el = document.getElementById('anomaly-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-check-circle fs-2 d-block mb-2 text-success"></i>Keine Auffälligkeiten in dieser Ansicht</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(a => `
+    <div class="card anomaly-card mb-2 severity-${a.severity} ${a.resolved ? 'resolved' : ''}"
+         onclick="showAnomalyDetail('${a.id}')">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1 me-2">
+            <span class="badge badge-${a.severity} text-white me-1">${a.severity.toUpperCase()}</span>
+            <span class="badge bg-secondary">${a.anomaly_type}</span>
+            ${a.resolved ? '<span class="badge bg-success ms-1"><i class="bi bi-check"></i> Aufgelöst</span>' : ''}
+            <span class="text-muted ms-1 small">Konto ${a.account}</span>
+          </div>
+        </div>
+        <div class="mt-1 small">${a.description.substring(0, 120)}${a.description.length > 120 ? '...' : ''}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('filter-severity').onchange = renderAnomalies;
+  document.getElementById('filter-resolved').onchange = renderAnomalies;
+}
+
+function showAnomalyDetail(id) {
+  const a = allAnomalies.find(x => x.id === id);
+  if (!a) return;
+
+  const actionLabels = {
+    ausbuchen: 'Ausbuchen',
+    umbuchen: 'Umbuchen auf korrektes Konto',
+    ignorieren: 'Ignorieren',
+    mandantenrueckfrage: 'Rückfrage Mandant',
+    korrektur: 'Korrektur buchen',
+    offene_posten_ausbuchen: 'Offene Posten ausbuchen',
+    abgrenzung: 'Abgrenzungsbuchung',
+  };
+
+  const bookingHtml = a.suggested_booking ? `
+    <div class="mt-3">
+      <div class="fw-semibold small mb-1"><i class="bi bi-journal-plus text-success me-1"></i>Vorgeschlagener Buchungssatz:</div>
+      <div class="bg-light rounded p-2 small font-monospace">
+        ${a.suggested_booking.debit_credit === 'S' ? 'Soll' : 'Haben'}
+        <strong>${a.suggested_booking.account}</strong>
+        / ${a.suggested_booking.debit_credit === 'S' ? 'Haben' : 'Soll'}
+        <strong>${a.suggested_booking.counter_account}</strong>
+        &nbsp;${formatAmount(a.suggested_booking.amount)} EUR<br>
+        <span class="text-muted">${a.suggested_booking.text}</span>
+      </div>
+    </div>` : '';
+
+  const actionBtns = (a.possible_actions || [a.suggested_action]).map(action => `
+    <button class="btn btn-sm ${action === a.suggested_action ? 'btn-primary' : 'btn-outline-secondary'} action-btn"
+            onclick="resolveAnomaly('${a.id}', '${action}')">
+      ${action === a.suggested_action ? '<i class="bi bi-check-circle me-1"></i>' : ''}${actionLabels[action] || action}
+    </button>
+  `).join('');
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="mb-2">
+      <span class="badge badge-${a.severity} text-white">${a.severity.toUpperCase()}</span>
+      <span class="badge bg-secondary ms-1">${a.anomaly_type}</span>
+      <span class="ms-2 text-muted small">Konto ${a.account}</span>
+    </div>
+    <p class="small mb-2">${a.description}</p>
+    <div class="alert alert-info py-2 px-3 small mb-2">
+      <i class="bi bi-lightbulb me-1"></i><strong>Empfehlung:</strong> ${a.recommendation}
+    </div>
+    ${bookingHtml}
+    <div class="mt-3">
+      <div class="fw-semibold small mb-2">Wie möchten Sie vorgehen?</div>
+      <div class="d-flex flex-wrap gap-2">${actionBtns}</div>
+    </div>
+    ${a.resolved ? `<div class="alert alert-success py-2 px-3 small mt-2">
+      <i class="bi bi-check-circle me-1"></i>Aufgelöst mit Aktion: <strong>${actionLabels[a.resolution_action] || a.resolution_action}</strong>
+    </div>` : ''}
+  `;
+
+  document.getElementById('detail-card').style.display = 'block';
+}
+
+async function resolveAnomaly(anomalyId, action) {
+  try {
+    const res = await fetch(`/api/session/${currentSession}/resolve`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ anomaly_id: anomalyId, action: action })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail);
+
+    // Update local state
+    const a = allAnomalies.find(x => x.id === anomalyId);
+    if (a) {
+      a.resolved = true;
+      a.resolution_action = action;
+      if (data.booking) a.resolution_booking = data.booking;
+    }
+
+    // Update KPI
+    document.getElementById('kpi-resolved').textContent = allAnomalies.filter(x => x.resolved).length;
+
+    renderAnomalies();
+    showAnomalyDetail(anomalyId);
+
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed bottom-0 end-0 p-3';
+    toast.style.zIndex = 9999;
+    toast.innerHTML = `<div class="toast show align-items-center text-white bg-success border-0">
+      <div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Auffälligkeit aufgelöst.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.closest('.position-fixed').remove()"></button></div></div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  } catch(err) {
+    alert('Fehler: ' + err.message);
+  }
+}
+
+// ─── Account Rendering ────────────────────────────────────────────────────────
+function renderAccounts() {
+  const search = document.getElementById('account-search').value.toLowerCase();
+  let accounts = allAccounts;
+  if (search) accounts = accounts.filter(a =>
+    a.account_number.includes(search) || a.account_name.toLowerCase().includes(search)
+  );
+
+  const typeColors = { asset: 'text-primary', liability: 'text-danger', revenue: 'text-success', expense: 'text-warning', statistical: 'text-secondary' };
+
+  document.getElementById('account-table-body').innerHTML = accounts.map(a => `
+    <tr class="account-row" onclick="showAccountBookings('${a.account_number}', '${a.account_name}')">
+      <td class="fw-semibold">${a.account_number}</td>
+      <td class="small ${typeColors[a.account_type]||''}">${a.account_name}</td>
+      <td class="text-end small ${a.balance_current < 0 ? 'text-danger' : ''}">${formatAmount(a.balance_current)}</td>
+      <td class="text-center">${a.anomaly_count > 0 ? `<span class="badge bg-warning text-dark">${a.anomaly_count}</span>` : ''}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('account-search').oninput = renderAccounts;
+}
+
+async function showAccountBookings(accountNumber, accountName) {
+  try {
+    const res = await fetch(`/api/session/${currentSession}/account/${accountNumber}/bookings`);
+    const bookings = await res.json();
+
+    document.getElementById('bookingModalTitle').textContent = `Buchungen – Konto ${accountNumber} (${accountName})`;
+    document.getElementById('booking-table-body').innerHTML = bookings.map(b => `
+      <tr class="booking-row">
+        <td>${b.document_date || '-'}</td>
+        <td><span class="badge ${b.debit_credit==='S'?'bg-primary':'bg-success'}">${b.debit_credit==='S'?'Soll':'Haben'}</span></td>
+        <td class="text-end fw-semibold">${formatAmount(b.amount)}</td>
+        <td>${b.counter_account || '-'}</td>
+        <td>${b.bu_key || '-'}</td>
+        <td class="text-muted">${b.document_ref1 || '-'}</td>
+        <td>${b.text || '-'}</td>
+      </tr>
+    `).join('');
+
+    new bootstrap.Modal(document.getElementById('bookingModal')).show();
+  } catch(err) {
+    alert('Buchungen konnten nicht geladen werden.');
+  }
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+async function exportDATEV() {
+  const resolved = allAnomalies.filter(a => a.resolved && a.resolution_action !== 'ignorieren');
+  if (!resolved.length) {
+    alert('Keine aufgelösten Buchungssätze vorhanden.\n\nBitte erst Auffälligkeiten mit Aktion (nicht "Ignorieren") auflösen.');
+    return;
+  }
+  window.location.href = `/api/session/${currentSession}/export/datev`;
+}
+
+async function exportReport() {
+  window.location.href = `/api/session/${currentSession}/export/report`;
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function showProgress(title, text) {
+  document.getElementById('progress-title').textContent = title;
+  document.getElementById('progress-text').textContent = text;
+  document.getElementById('progress-overlay').classList.remove('d-none');
+}
+function hideProgress() {
+  document.getElementById('progress-overlay').classList.add('d-none');
+}
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function newUpload() {
+  currentSession = null; allAnomalies = []; allAccounts = [];
+  document.getElementById('upload-form').reset();
+  document.getElementById('file-current-name').textContent = '';
+  document.getElementById('file-previous-name').textContent = '';
+  showSection('upload-section');
+}
+function formatAmount(n) {
+  return new Intl.NumberFormat('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n || 0);
+}
+</script>
+</body>
+</html>
