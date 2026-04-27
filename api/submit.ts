@@ -14,10 +14,18 @@ interface Row {
   antwort: string;
 }
 
+interface UploadedFile {
+  name: string;
+  type: string;
+  size: number;
+  data: string; // base64
+}
+
 interface SubmitBody {
   clientName: string;
   mandantId: string;
   steuerjahr: number;
+  files?: UploadedFile[];
   rows: Row[];
 }
 
@@ -134,7 +142,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       <div style="font-family:sans-serif;max-width:800px">
         <h2 style="color:#1e293b">Anlage N ${body.steuerjahr} – ${body.clientName}</h2>
         <p style="color:#64748b">Mandant-ID: <strong>${body.mandantId}</strong></p>
-        <p style="color:#64748b;font-size:13px">Die Excel-Datei finden Sie im Anhang.</p>
+        <p style="color:#64748b;font-size:13px">
+          Die Excel-Datei finden Sie im Anhang.
+          ${body.files?.length ? `Zusätzlich wurden <strong>${body.files.length} Beleg(e)</strong> hochgeladen.` : ''}
+        </p>
         <table style="border-collapse:collapse;width:100%;margin-top:16px">
           <thead>
             <tr>
@@ -147,13 +158,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         </table>
       </div>`;
 
+    // Excel + alle hochgeladenen Belege als Anhänge
+    const attachments: { filename: string; content: string }[] = [
+      { filename, content: excelBuffer.toString('base64') },
+      ...(body.files ?? []).map((f) => ({ filename: f.name, content: f.data })),
+    ];
+
     const resend = new Resend(RESEND_API_KEY);
     await resend.emails.send({
       from: ABSENDER,
       to: KANZLEI_EMAIL,
       subject: `Anlage N ${body.steuerjahr} – ${body.clientName} (${body.mandantId})`,
       html,
-      attachments: [{ filename, content: excelBuffer.toString('base64') }],
+      attachments,
     });
 
     return res.status(200).json({ success: true });

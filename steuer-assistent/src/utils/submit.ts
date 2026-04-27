@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import type { UploadedFile } from '../components/FileUpload';
 
 export interface Row {
   abschnitt: string;
@@ -11,9 +12,9 @@ export interface SubmitParams {
   mandantId: string;
   steuerjahr: number;
   rows: Row[];
+  files?: UploadedFile[];
 }
 
-// Sofort-Download für den Mandanten (client-seitig)
 export function downloadExcel({ clientName, mandantId, steuerjahr, rows }: SubmitParams) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
@@ -25,7 +26,6 @@ export function downloadExcel({ clientName, mandantId, steuerjahr, rows }: Submi
   XLSX.writeFile(wb, `${mandantId}_${clientName}_AnlageN_${steuerjahr}.xlsx`);
 }
 
-// Formatiertes Excel per E-Mail via Vercel-Funktion
 export async function sendEmail(params: SubmitParams) {
   const res = await fetch('/api/submit', {
     method: 'POST',
