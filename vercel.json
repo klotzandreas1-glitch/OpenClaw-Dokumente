@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd steuer-assistent && npm install && npm run build",
+  "outputDirectory": "steuer-assistent/dist",
+  "installCommand": "echo 'install handled in buildCommand'"
+}
