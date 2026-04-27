@@ -1,19 +1,13 @@
-import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
-import {
-  EMAILJS_SERVICE_ID,
-  EMAILJS_TEMPLATE_ID,
-  EMAILJS_PUBLIC_KEY,
-  KANZLEI_EMAIL,
-} from '../config';
+import { WEB3FORMS_ACCESS_KEY } from '../config';
 
-interface Row {
+export interface Row {
   abschnitt: string;
   frage: string;
   antwort: string;
 }
 
-interface SubmitParams {
+export interface SubmitParams {
   clientName: string;
   mandantId: string;
   steuerjahr: number;
@@ -22,11 +16,10 @@ interface SubmitParams {
 
 export function downloadExcel({ clientName, mandantId, steuerjahr, rows }: SubmitParams) {
   const wb = XLSX.utils.book_new();
-  const wsData = [
+  const ws = XLSX.utils.aoa_to_sheet([
     ['Abschnitt', 'Frage', 'Antwort'],
     ...rows.map((r) => [r.abschnitt, r.frage, r.antwort]),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ]);
   ws['!cols'] = [{ wch: 28 }, { wch: 58 }, { wch: 28 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Anlage N');
   XLSX.writeFile(wb, `${mandantId}_${clientName}_AnlageN_${steuerjahr}.xlsx`);
@@ -36,30 +29,35 @@ export async function sendEmail({ clientName, mandantId, steuerjahr, rows }: Sub
   const tableRows = rows
     .map(
       (r) =>
-        `<tr><td style="padding:4px 8px;border:1px solid #e2e8f0;color:#64748b">${r.abschnitt}</td>` +
+        `<tr>` +
+        `<td style="padding:4px 8px;border:1px solid #e2e8f0;color:#64748b">${r.abschnitt}</td>` +
         `<td style="padding:4px 8px;border:1px solid #e2e8f0">${r.frage}</td>` +
-        `<td style="padding:4px 8px;border:1px solid #e2e8f0;font-weight:500">${r.antwort}</td></tr>`,
+        `<td style="padding:4px 8px;border:1px solid #e2e8f0;font-weight:500">${r.antwort}</td>` +
+        `</tr>`,
     )
     .join('');
 
-  const formData =
-    `<table style="border-collapse:collapse;width:100%;font-size:13px">` +
+  const message =
+    `<h2 style="font-family:sans-serif">Anlage N ${steuerjahr} – ${clientName}</h2>` +
+    `<p style="font-family:sans-serif">Mandant-ID: <strong>${mandantId}</strong></p>` +
+    `<table style="border-collapse:collapse;width:100%;font-size:13px;font-family:sans-serif">` +
     `<thead><tr>` +
     `<th style="padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;text-align:left">Abschnitt</th>` +
     `<th style="padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;text-align:left">Frage</th>` +
     `<th style="padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;text-align:left">Antwort</th>` +
     `</tr></thead><tbody>${tableRows}</tbody></table>`;
 
-  await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID,
-    {
-      to_email:    KANZLEI_EMAIL,
-      client_name: clientName,
-      mandant_id:  mandantId,
-      steuerjahr:  String(steuerjahr),
-      form_data:   formData,
-    },
-    EMAILJS_PUBLIC_KEY,
-  );
+  const res = await fetch('https://api.web3forms.com/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: `Anlage N ${steuerjahr} – ${clientName} (${mandantId})`,
+      from_name: 'Steuer-Assistent',
+      message,
+    }),
+  });
+
+  const data = (await res.json()) as { success: boolean; message?: string };
+  if (!data.success) throw new Error(data.message ?? 'Fehler beim E-Mail-Versand');
 }
