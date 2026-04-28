@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beteiligungsorganigramm Familie Mustermann</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f4f6f9;
+      color: #333;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a2e;
+      border-bottom: 3px solid #4A90D9;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 32px;
+    }
+
+    .diagram-container {
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .legend {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .legend-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .dot-person   { background: #4A90D9; }
+    .dot-holding  { background: #F5A623; }
+    .dot-operative{ background: #7ED321; }
+    .dot-tochter  { background: #D0D0D0; border: 1px solid #999; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 32px;
+      font-size: 13px;
+    }
+
+    th {
+      background: #4A90D9;
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    tr:nth-child(even) td { background: #f9f9f9; }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 11px;
+      color: #aaa;
+      text-align: right;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Beteiligungsorganigramm</h1>
+  <div class="subtitle">Familie Mustermann &nbsp;|&nbsp; Stand: April 2026 &nbsp;|&nbsp; Vertraulich</div>
+
+  <div class="diagram-container">
+    <div class="mermaid">
+graph TD
+
+    VATER["Hans Mustermann\nVater"]
+    MUTTER["Maria Mustermann\nMutter"]
+    SOHN1["Thomas Mustermann\nSohn 1"]
+    SOHN2["Klaus Mustermann\nSohn 2"]
+
+    H1["Mustermann Holding GmbH"]
+    H2["MM Beteiligungs GmbH"]
+    H3["Familien Vermögens\nGmbH & Co. KG"]
+
+    OP1["Mustermann Bau GmbH"]
+    OP2["MM Immobilien GmbH"]
+    OP3["Mustermann Logistik GmbH"]
+    OP4["MM Digital Solutions GmbH"]
+    OP5["Mustermann Hotel GmbH"]
+    OP6["MM Handels GmbH"]
+    OP7["Mustermann Energie GmbH"]
+    OP8["MM Gastronomie GmbH"]
+    OP9["Mustermann Finanz GmbH"]
+    OP10["MM Grundstücks GmbH"]
+    OP11["Mustermann Verwaltungs AG"]
+
+    T1["Bau Nord GmbH"]
+    T2["Bau Süd GmbH"]
+    T3["Immo Berlin GmbH"]
+    T4["Immo München GmbH"]
+    T5["Logistik West GmbH"]
+    T6["Digital Austria GmbH"]
+    T7["Hotel Bayern GmbH"]
+    T8["Hotel Berlin GmbH"]
+
+    VATER  -->|"50 %"| H1
+    MUTTER -->|"50 %"| H1
+    SOHN1  -->|"50 %"| H2
+    SOHN2  -->|"50 %"| H2
+    VATER  -->|"40 %"| H3
+    MUTTER -->|"10 %"| H3
+    SOHN1  -->|"25 %"| H3
+    SOHN2  -->|"25 %"| H3
+
+    VATER  -->|"100 %"| OP9
+    VATER  -->|"60 %"| OP11
+    MUTTER -->|"100 %"| OP10
+    SOHN1  -->|"100 %"| OP4
+    SOHN2  -->|"100 %"| OP8
+
+    H1 -->|"100 %"| OP1
+    H1 -->|"100 %"| OP2
+    H1 -->|"60 %"| OP3
+    H2 -->|"100 %"| OP5
+    H2 -->|"100 %"| OP6
+    H3 -->|"40 %"| OP3
+    H3 -->|"100 %"| OP7
+
+    OP1 -->|"100 %"| T1
+    OP1 -->|"100 %"| T2
+    OP2 -->|"100 %"| T3
+    OP2 -->|"51 %"| T4
+    OP3 -->|"100 %"| T5
+    OP4 -->|"100 %"| T6
+    OP5 -->|"100 %"| T7
+    OP5 -->|"75 %"| T8
+
+    classDef person    fill:#4A90D9,stroke:#2C5F8A,color:#fff,font-weight:bold
+    classDef holding   fill:#F5A623,stroke:#C47D0E,color:#fff,font-weight:bold
+    classDef operative fill:#7ED321,stroke:#5A9A18,color:#fff
+    classDef tochter   fill:#D0D0D0,stroke:#999,color:#333
+
+    class VATER,MUTTER,SOHN1,SOHN2 person
+    class H1,H2,H3 holding
+    class OP1,OP2,OP3,OP4,OP5,OP6,OP7,OP8,OP9,OP10,OP11 operative
+    class T1,T2,T3,T4,T5,T6,T7,T8 tochter
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-person"></div> Natürliche Personen</div>
+    <div class="legend-item"><div class="legend-dot dot-holding"></div> Holdinggesellschaften</div>
+    <div class="legend-item"><div class="legend-dot dot-operative"></div> Operative Gesellschaften</div>
+    <div class="legend-item"><div class="legend-dot dot-tochter"></div> Tochtergesellschaften</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Gesellschaft</th>
+        <th>Rechtsform</th>
+        <th>Anteilseigner</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Mustermann Holding GmbH</td><td>GmbH</td><td>Vater 50 %, Mutter 50 %</td></tr>
+      <tr><td>2</td><td>MM Beteiligungs GmbH</td><td>GmbH</td><td>Sohn 1 50 %, Sohn 2 50 %</td></tr>
+      <tr><td>3</td><td>Familien Vermögens GmbH & Co. KG</td><td>GmbH & Co. KG</td><td>Vater 40 %, Mutter 10 %, Sohn 1 25 %, Sohn 2 25 %</td></tr>
+      <tr><td>4</td><td>Mustermann Bau GmbH</td><td>GmbH</td><td>Mustermann Holding 100 %</td></tr>
+      <tr><td>5</td><td>MM Immobilien GmbH</td><td>GmbH</td><td>Mustermann Holding 100 %</td></tr>
+      <tr><td>6</td><td>Mustermann Logistik GmbH</td><td>GmbH</td><td>Holding 60 %, Familien KG 40 %</td></tr>
+      <tr><td>7</td><td>MM Digital Solutions GmbH</td><td>GmbH</td><td>Sohn 1 100 %</td></tr>
+      <tr><td>8</td><td>Mustermann Hotel GmbH</td><td>GmbH</td><td>MM Beteiligungs 100 %</td></tr>
+      <tr><td>9</td><td>MM Handels GmbH</td><td>GmbH</td><td>MM Beteiligungs 100 %</td></tr>
+      <tr><td>10</td><td>Mustermann Energie GmbH</td><td>GmbH</td><td>Familien KG 100 %</td></tr>
+      <tr><td>11</td><td>MM Gastronomie GmbH</td><td>GmbH</td><td>Sohn 2 100 %</td></tr>
+      <tr><td>12</td><td>Mustermann Finanz GmbH</td><td>GmbH</td><td>Vater 100 %</td></tr>
+      <tr><td>13</td><td>MM Grundstücks GmbH</td><td>GmbH</td><td>Mutter 100 %</td></tr>
+      <tr><td>14</td><td>Mustermann Verwaltungs AG</td><td>AG</td><td>Vater 60 %</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">Vertraulich – Erstellt mit Claude Code &nbsp;|&nbsp; April 2026</div>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
